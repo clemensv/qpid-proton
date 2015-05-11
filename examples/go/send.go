@@ -76,29 +76,27 @@ To each URL, send the string "path-n" where n is the message number.
 	connections := make([]*messaging.Connection, len(urls))
 	defer func() {
 		for _, c := range connections {
-			c.Close()
+			if c != nil {
+				c.Close()
+			}
 		}
 	}()
 
 	for i, urlStr := range urls {
-		url, err := proton.ParseURL(urlStr) // Like net/url.Parse() but with AMQP defaults.
-		fatalIf(err)
-		debug.Printf("Connecting to %v", url)
-
-		// Open a standard Go net.Conn for the AMQP connection
-		conn, err := net.Dial("tcp", url.Host) // Note net.URL.Host is actually "host:port"
-		fatalIf(err)
-
-		pc, err := messaging.Connect(conn) // This is our AMQP connection using conn.
-		fatalIf(err)
-		connections[i] = pc
-
-		// Start a goroutine to send to urlStr
+		debug.Printf("Connecting to %v", urlStr)
 		go func(urlStr string) {
-			defer wait.Done() // Notify main() that this goroutine is done.
+			defer wait.Done()                   // Notify main() that this goroutine is done.
+			url, err := proton.ParseURL(urlStr) // Like net/url.Parse() but with AMQP defaults.
+			fatalIf(err)
 
-			// FIXME aconway 2015-04-29: sessions, default sessions, senders...
-			// Create a sender using the path of the URL as the AMQP target address
+			// Open a standard Go net.Conn and and AMQP connection using it.
+			conn, err := net.Dial("tcp", url.Host) // Note net.URL.Host is actually "host:port"
+			fatalIf(err)
+			pc, err := messaging.Connect(conn) // This is our AMQP connection.
+			fatalIf(err)
+			connections[i] = pc // So we can close it when main() ends
+
+			// Create a sender using the path of the URL as the AMQP address
 			s, err := pc.Sender(url.Path)
 			fatalIf(err)
 
@@ -108,7 +106,7 @@ To each URL, send the string "path-n" where n is the message number.
 				m.SetBody(body)
 				ack, err := s.Send(m)
 				fatalIf(err)
-				acks <- Ack{ack, body}
+				acks <- Ack{ack, body} // Send the acknowledgement to main()
 			}
 		}(urlStr)
 	}

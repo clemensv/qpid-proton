@@ -92,16 +92,14 @@ Receive messages from all the listed URLs concurrently and print them.
 			url, err := proton.ParseURL(urlStr) // Like net/url.Parse() but with AMQP defaults.
 			fatalIf(err)
 
-			// Open a standard Go net.Conn for the AMQP connection
+			// Open a standard Go net.Conn and and AMQP connection using it.
 			conn, err := net.Dial("tcp", url.Host) // Note net.URL.Host is actually "host:port"
 			fatalIf(err)
-
 			pc, err := messaging.Connect(conn) // This is our AMQP connection.
 			fatalIf(err)
-			connections[i] = pc
+			connections[i] = pc // So we can close it when main() ends
 
-			// For convenience a proton.Connection provides a DefaultSession()
-			// pc.Receiver() is equivalent to pc.DefaultSession().Receiver()
+			// Create a receiver using the path of the URL as the AMQP address
 			r, err := pc.Receiver(url.Path)
 			fatalIf(err)
 
