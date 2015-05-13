@@ -37,8 +37,8 @@ import (
 	"net"
 	"os"
 	"path"
-	"qpid.apache.org/proton"
-	"qpid.apache.org/proton/event"
+	"qpid.apache.org/proton/go/amqp"
+	"qpid.apache.org/proton/go/event"
 	"sync"
 )
 
@@ -89,14 +89,14 @@ func (q *queue) empty() bool {
 	return len(q.consumers) == 0 && q.messages.Len() == 0
 }
 
-func (q *queue) push(context *event.Pump, message proton.Message) {
+func (q *queue) push(context *event.Pump, message amqp.Message) {
 	q.messages.PushBack(message)
 	q.pop(context)
 }
 
 func (q *queue) popTo(context *event.Pump, link event.Link) bool {
 	if q.messages.Len() != 0 && link.Credit() > 0 {
-		message := q.messages.Remove(q.messages.Front()).(proton.Message)
+		message := q.messages.Remove(q.messages.Front()).(amqp.Message)
 		debug.Printf("link %s <- queue %s: %s", logLink(link), q.name, formatMessage{message})
 		// The first return parameter is an event.Delivery.
 		// The Deliver can be used to track message status, e.g. so we can re-delver on failure.
@@ -191,11 +191,11 @@ func (b *broker) HandleMessagingEvent(t event.MessagingEventType, e event.Event)
 
 func (b *broker) listen(addr string) (err error) {
 	// Use the standard Go "net" package to listen for connections.
-	info.Printf("Listening on %s", addr)
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
+	info.Printf("Listening on %s", listener.Addr())
 	defer listener.Close()
 	for {
 		conn, err := listener.Accept()
@@ -244,7 +244,7 @@ func fatalIf(err error) {
 	}
 }
 
-type formatMessage struct{ m proton.Message }
+type formatMessage struct{ m amqp.Message }
 
 func (fm formatMessage) String() string {
 	if *full {
