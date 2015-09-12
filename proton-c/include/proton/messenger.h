@@ -1054,6 +1054,28 @@ PN_EXTERN int
 pn_messenger_set_ssl_peer_authentication_mode(pn_messenger_t *messenger,
                                               const pn_ssl_verify_mode_t mode);
 
+
+/** Sets control flags to enable additional function for the Messenger.
+ *
+ * @param[in] messenger the messenger
+ * @param[in] sasl_mechanisms whitespace-separated list of allowed SASL 
+ *            mechanisms (e.g. "PLAIN ANONYMOUS") or NULL to permit any
+ *            selecting any SASL mechanism offered by the server 
+ *
+ * @return an error code of zero if there is no error
+ */
+PN_EXTERN int pn_messenger_set_allowed_sasl_mechanisms(pn_messenger_t *messenger,
+                                                       const char * sasl_mechanisms);
+
+/** Gets the flags for a Messenger.
+ *
+ * @param[in] messenger the messenger
+ * @return Allowed SASL mechanisms currently defined for messenger. May be 
+ *         NULL when there is no constraints defined and any SASL mechanism 
+ *         is allowed.
+ */
+PN_EXTERN const char * pn_messenger_get_allowed_sasl_mechanisms(pn_messenger_t *messenger);
+
 #ifdef __cplusplus
 }
 #endif

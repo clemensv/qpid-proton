@@ -114,6 +114,7 @@ struct pn_messenger_t {
   bool passive;
   bool interrupted;
   bool worked;
+  pn_string_t * allowed_sasl_mechanisms;
 };
 
 #define CTX_HEAD                                \
@@ -201,6 +202,16 @@ static void pni_connection_update(pn_selectable_t *sel) {
   if (c < 0 && p < 0) {
     pn_selectable_terminate(sel);
   }
+}
+
+static void pni_messenger_sasl_config(pn_messenger_t * messenger, pn_transport_t * t)
+{
+    pn_sasl_t *s = pn_sasl(t);
+    
+    if (messenger->flags & PN_FLAGS_ALLOW_INSECURE_MECHS) {
+       pn_sasl_set_allow_insecure_mechs(s, true);
+    }
+    pn_sasl_allowed_mechs(s, pn_string_get(messenger->allowed_sasl_mechanisms));
 }
 
 #include <errno.h>
@@ -334,10 +345,7 @@ static void pni_listener_readable(pn_selectable_t *sel)
 
   pn_transport_t *t = pn_transport();
   pn_transport_set_server(t);
-  if (ctx->messenger->flags & PN_FLAGS_ALLOW_INSECURE_MECHS) {
-      pn_sasl_t *s = pn_sasl(t);
-      pn_sasl_set_allow_insecure_mechs(s, true);
-  }
+  pni_messenger_sasl_config(ctx->messenger, t);
   pn_ssl_t *ssl = pn_ssl(t);
   pn_ssl_init(ssl, ctx->domain, NULL);
 
@@ -669,6 +677,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->rcv_settle_mode = PN_RCV_FIRST;
     m->tracer = NULL;
     m->ssl_peer_authentication_mode = PN_SSL_VERIFY_PEER_NAME;
+    m->allowed_sasl_mechanisms = pn_string(NULL);
   }
 
   return m;
@@ -808,6 +817,7 @@ static void pni_reclaim(pn_messenger_t *messenger)
 void pn_messenger_free(pn_messenger_t *messenger)
 {
   if (messenger) {
+    pn_free(messenger->allowed_sasl_mechanisms);
     pn_free(messenger->domain);
     pn_free(messenger->rewritten);
     pn_free(messenger->original);
@@ -1143,11 +1153,7 @@ void pn_messenger_process_connection(pn_messenger_t *messenger, pn_event_t *even
       pn_transport_unbind(pn_connection_transport(conn));
       pn_connection_reset(conn);
       pn_transport_t *t = pn_transport();
-      if (messenger->flags & PN_FLAGS_ALLOW_INSECURE_MECHS &&
-          messenger->address.user && messenger->address.pass) {
-        pn_sasl_t *s = pn_sasl(t);
-        pn_sasl_set_allow_insecure_mechs(s, true);
-      }
+      pni_messenger_sasl_config(messenger, t);
       pn_transport_bind(t, conn);
       pn_decref(t);
       pn_transport_config(messenger, conn);
@@ -1679,10 +1685,7 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
   pn_connection_t *connection =
     pn_messenger_connection(messenger, sock, scheme, user, pass, host, port, NULL);
   pn_transport_t *transport = pn_transport();
-  if (messenger->flags & PN_FLAGS_ALLOW_INSECURE_MECHS && user && pass) {
-      pn_sasl_t *s = pn_sasl(transport);
-      pn_sasl_set_allow_insecure_mechs(s, true);
-  }
+  pni_messenger_sasl_config(messenger, transport);
   pn_transport_bind(transport, connection);
   pn_decref(transport);
   pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) pn_connection_get_context(connection);
@@ -2415,12 +2418,23 @@ pn_millis_t pn_messenger_get_remote_idle_timeout(pn_messenger_t *messenger,
   return timeout;
 }
 
-int
-pn_messenger_set_ssl_peer_authentication_mode(pn_messenger_t *messenger,
+int pn_messenger_set_ssl_peer_authentication_mode(pn_messenger_t *messenger,
                                               const pn_ssl_verify_mode_t mode)
 {
   if (!messenger)
     return PN_ARG_ERR;
   messenger->ssl_peer_authentication_mode = mode;
   return 0;
+}
+
+PN_EXTERN int pn_messenger_set_allowed_sasl_mechanisms(pn_messenger_t *messenger,
+                                             const char * sasl_mechanisms)
+{
+   pn_string_set(messenger->allowed_sasl_mechanisms, sasl_mechanisms);
+   return 0; 
+}
+
+PN_EXTERN const char * pn_messenger_get_allowed_sasl_mechanisms(pn_messenger_t *messenger)
+{
+    return pn_string_get(messenger->allowed_sasl_mechanisms);
 }
