@@ -1079,6 +1079,8 @@ public class TransportImpl extends EndpointImpl
             transportSession.setRemoteChannel(channel);
             session.setRemoteState(EndpointState.ACTIVE);
             transportSession.setNextIncomingId(begin.getNextOutgoingId());
+            transportSession.setRemoteIncomingWindow(begin.getIncomingWindow());
+            transportSession.setRemoteOutgoingWindow(begin.getOutgoingWindow());
             _remoteSessions.put(channel, transportSession);
 
             _connectionEndpoint.put(Event.Type.SESSION_REMOTE_OPEN, session);

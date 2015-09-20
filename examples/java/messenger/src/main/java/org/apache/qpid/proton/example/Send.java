@@ -28,8 +28,13 @@ import org.apache.qpid.proton.messenger.impl.MessengerImpl;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Handler;
 import java.util.logging.Level;
+import java.util.logging.LogManager;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
+import java.util.logging.StreamHandler;
 
 /**
  * Example/test of the java Messenger/Message API.
@@ -75,15 +80,30 @@ public class Send {
     }
 
     private void run() {
+        
+        Logger log = Logger.getLogger("");
+log.setLevel(Level.FINE);
+ConsoleHandler handler = new ConsoleHandler();
+handler.setLevel(Level.FINE);
+handler.setFormatter(new SimpleFormatter());
+log.addHandler(handler);
         try {
             Messenger mng = new MessengerImpl();
+            //mng.setOutgoingWindow(10);
+            //mng.setIncomingWindow(10);
+            mng.setTimeout(480000);
             mng.start();
-            Message msg = new MessageImpl();
-            msg.setAddress(address);
-            if (subject != null) msg.setSubject(subject);
-            for (String body : bodies) {
-                msg.setBody(new AmqpValue(body));
-                mng.put(msg);
+            
+            for (int i = 0; i < 100; i ++) {
+                System.out.printf("%d\n", i);
+                Message msg = new MessageImpl();
+                msg.setAddress(address);
+                if (subject != null) msg.setSubject(subject);
+                for (String body : bodies) {
+                    msg.setBody(new AmqpValue(body));
+                    mng.put(msg);
+                }
+                while ( mng.work(1000) );
             }
             mng.send();
             mng.stop();

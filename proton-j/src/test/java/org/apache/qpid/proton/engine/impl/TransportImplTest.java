@@ -284,7 +284,7 @@ public class TransportImplTest
     public void testTickLocalTimeout()
     {
         MockTransportImpl transport = new MockTransportImpl();
-        transport.setIdleTimeout(4000);
+        transport.setIdleTimeout(6000);
         Connection connection = Proton.connection();
         transport.bind(connection);
 

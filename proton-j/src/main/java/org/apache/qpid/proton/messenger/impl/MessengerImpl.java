@@ -21,6 +21,8 @@
 package org.apache.qpid.proton.messenger.impl;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Iterator;
@@ -1256,8 +1258,29 @@ public class MessengerImpl implements Messenger
             Sasl sasl = connector.sasl();
             if (sasl != null)
             {
-                sasl.client();
-                sasl.setMechanisms(new String[]{"ANONYMOUS"});
+                boolean isAnon = true;
+                try
+                {
+                    String username = address.getName();
+                    String password = address.getPass();
+                    if ( username != null && password != null )
+                    {
+                        username = URLDecoder.decode(username, "UTF-8");
+                        password = URLDecoder.decode(password, "UTF-8");
+                        sasl.plain(username, password);
+                        isAnon = false;
+                    }
+                }
+                catch(UnsupportedEncodingException ue)
+                {
+                   _logger.log(Level.WARNING, "Unsupported encoding in URL credentials", ue);     
+                }
+                
+                if ( isAnon )
+                {
+                    sasl.client();
+                    sasl.setMechanisms(new String[]{"ANONYMOUS"});
+                }
             }
             if ("amqps".equalsIgnoreCase(address.getScheme())) {
                 Transport transport = connector.getTransport();

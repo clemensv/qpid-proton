@@ -346,7 +346,7 @@ class TransportSession
         unsetRemoteChannel();
     }
 
-    private void setRemoteIncomingWindow(UnsignedInteger incomingWindow)
+    void setRemoteIncomingWindow(UnsignedInteger incomingWindow)
     {
         _remoteIncomingWindow = incomingWindow;
     }
@@ -356,7 +356,7 @@ class TransportSession
         _remoteIncomingWindow = _remoteIncomingWindow.subtract(UnsignedInteger.ONE);
     }
 
-    private void setRemoteOutgoingWindow(UnsignedInteger outgoingWindow)
+    void setRemoteOutgoingWindow(UnsignedInteger outgoingWindow)
     {
         _remoteOutgoingWindow = outgoingWindow;
     }
